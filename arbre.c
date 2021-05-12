@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "arbre.h"
 #include "joust.h"
@@ -8,11 +9,112 @@
 #define PROFONDEUR 5
 #define DEBUG 0
 
+#define Cp 0.3
+#define SIMULATION 100
 
+
+
+int totalPassage(P_NODE proot)
+{
+    while(proot->father != NULL)
+    {
+        proot = proot->father;
+    }
+    return proot->passage;
+}
+
+
+int calculUCT(P_NODE proot)
+{
+    return proot->victory + 2*Cp*sqrt((2*log(totalPassage(proot)))/proot->passage);
+}
 
 /**
- * evaluation "local" d'un noeud. Donc on �value le noeud sans propagation
+ * return indice array of max value
  */
+int indexMaxValue(float * arrayToEvaluate, int size)
+{
+    int index = 0;
+    for(int i = 1; i < size; i++)
+    {
+        if(arrayToEvaluate[i] > arrayToEvaluate[index])
+            index = i;
+    }
+    return index;
+}
+
+
+P_NODE selectBestSon(P_NODE proot)
+{
+    float *tmp = (float *) malloc(sizeof(float)); // array that will contain UCT value to each sons
+    for(int i = 0; i < proot->board->nbr_mouvements; i++)
+    {
+        if(proot->son[i]->passage == 0 || totalPassage(proot) == 0) // infinite value
+            return proot->son[i];
+        tmp[i] = calculUCT(proot->son[i]);
+    }
+    return proot->son[indexMaxValue(tmp, proot->board->nbr_mouvements)];
+}
+
+int createSon(P_NODE proot)
+{
+    proot->son = (P_NODE *) malloc(sizeof(P_NODE)*proot->board->nbr_mouvements);
+    PLATEAU *copyBoard = (PLATEAU *) malloc(sizeof(PLATEAU));
+    cloner_jeu(copyBoard, proot->board);
+    for(int i = 0; i < proot->board->nbr_mouvements; i++)
+    {
+        P_NODE tmp = (NODE *) malloc(sizeof(NODE));
+        tmp->passage = 0;
+        tmp->victory = 0;
+        tmp->son = NULL;
+        tmp->father = proot;
+        jouer_coup(copyBoard, proot->board->mouvements[i]);
+        tmp->board = copyBoard;
+        tmp->movementOrigin = &proot->board->mouvements[i];
+    }
+}
+
+COORDS* bestChoice(PLATEAU board)
+{
+    for(int i = 0; i < SIMULATION; i++)
+    {
+        P_NODE proot = (P_NODE *) malloc(sizeof(P_NODE));
+        PLATEAU *copyBoard = (PLATEAU *) malloc(sizeof(PLATEAU));
+        cloner_jeu(copyBoard, proot->board);
+        proot->father = NULL;
+        proot->son = NULL;
+        proot->remainingSon = NULL;
+        proot->victory = 0;
+        proot->passage = 0;
+        proot->board = copyBoard;
+        proot->movementOrigin = NULL;
+        while(proot->passage > 0 ||proot->father == NULL)
+        {
+            // looking for best sons
+
+        }
+        // simulate the current node
+
+    }
+
+
+
+    createSon(proot);
+    for(int i = 0; i < proot->board->nbr_mouvements; i++)
+    {
+        if(proot->son[i]->passage == 0 || totalPassage(proot) == 0){
+            rollOut();
+        }
+    }
+}
+
+void rollOut()
+{
+    return;
+}
+
+
+/*
 int evaluationNoeud(P_NOEUD pracine)
 {
     if(pracine->profondeurActuelle % 2 == 0) // si la profondeur est paire alors les mouvements que contient le noeud correspondent au mouvement possible de l'ia
@@ -21,12 +123,6 @@ int evaluationNoeud(P_NOEUD pracine)
         return (pracine->plateau->nbr_mouvements == 0) ? 20 : -pracine->plateau->nbr_mouvements; // si l'ia ne peut plus jouer on renvoie -20 sinon + le nombre de coup
 }
 
-/**
- * si le noeud re�u est une feuille (ne poss�de aucun enfant) alors on �value le noeud localement via la fonction evaluationNoeud
- * si le noeud re�u poss�de des enfants, on fait le min ou le max de l'�valuation de ses enfants.
- * si les enfants correspondent au choix de l'ia on fait le max
- * si les enfants correspondent au choix de l'adversaire on fait le min
- */
 void minMaxNoeud(P_NOEUD pracine)
 {
     if(pracine->profondeurActuelle == PROFONDEUR || pracine->plateau->nbr_mouvements == 0) // si on est bout d'une feuille
@@ -50,10 +146,7 @@ void minMaxNoeud(P_NOEUD pracine)
     }
 }
 
-/**
- * cr�er de mani�re r�cursive l'arbre
- * renvoie le pointeur vers le noeud de la racine de l'arbre
- */
+
 P_NOEUD nouveau_noeud(P_NOEUD pracinePere, PLATEAU *plateau, COORDS *coup)
 {
     P_NOEUD pracine = (NOEUD *) malloc(sizeof(NOEUD)); // on cr�e le noeud
@@ -93,13 +186,6 @@ P_NOEUD nouveau_noeud(P_NOEUD pracinePere, PLATEAU *plateau, COORDS *coup)
     return pracine;
 }
 
-
-/**
- * d�truit l'arbre de fa�on r�cursive
- * on appelle les noeuds enfant en boucle jusqu'� arriver � une feuille de l'arbre
- * on lib�re ce que contient le noeud courant qui est allou� dynamiquement puis on fait la m�me chose au noeud lui m�me
- * une fois que tout les enfants d'un noeud sont supprimer on sort de la boucle for et on supprime donc le noeud courant
- */
 void detruitArbre(P_NOEUD pracine)
 {
     if(pracine == NULL)
@@ -121,10 +207,6 @@ void detruitArbre(P_NOEUD pracine)
     #endif // DEBUG
 }
 
-/**
- * prend en param�tre le pointeur vers le noeud racine de l'arbre et renvoie l'adresse d'une structure coordonn�es.
- * on renvoie le mouvement qui m�ne au fils ayant la meilleur �valuation. Ce qui correspond donc au meilleur coup
- */
 COORDS* meilleur_coup(P_NOEUD pracine)
 {
     P_NOEUD maxFils = (NOEUD *) malloc(sizeof(NOEUD));
@@ -147,13 +229,7 @@ COORDS* meilleur_coup(P_NOEUD pracine)
 /// l'id�e �tait surtout de me faire gagner du temps dans mes test.Puisque c'est fonctionnalit� ne sont pas explicitement demand� dans l'intitul� du sujet je me suis permis de les �crire en vitesse.
 
 
-/**
- * r�cup�re le num�ro de fils. Donc si pour un noeud quelconque cela correspond � l'indice de la case du tableau de P_NOEUD fils
- * 0 pour le premier fils, 1, etc
- * si jamais le aucune correspondance n'est trouv� entre la pracine et les coups possible du p�re on renvoie 100 comme valeur erreur
- * car on sait si bien que tout valeur en dehors de l'intervale [0; 8] seront fausses
- * cette fonction n'est utilis� que par mes autres fonctions de d�buguage
- */
+
 int get_fils_numero(P_NOEUD pracine)
 {
    if(pracine->pere == NULL)
@@ -180,9 +256,6 @@ size_t max_ligne(char **ligne, int nombreLigne)
     return max;
 }
 
-/**
- * cr�ation d'un formatage de message un peu plus est�tique utilis� pour mon d�buguage
- */
 void affiche_message(char **ligne, int nombreLigne)
 {
     printf("\t");// ligne 1
@@ -221,9 +294,7 @@ void affiche_message(char **ligne, int nombreLigne)
     printf("\n\n");
 }
 
-/**
- * fonction de d�buguage qui affiche des renseignement sur le noeud pass� en param�tre
- */
+
 void debug_noeud(P_NOEUD pracine)
 {
     if(pracine != NULL)
@@ -257,3 +328,4 @@ void debug_noeud(P_NOEUD pracine)
         printf("\n\n\n");
     }
 }
+*/

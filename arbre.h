@@ -3,6 +3,8 @@
 
 #include "joust.h"
 
+
+/*
 typedef struct noeud{
     struct noeud *pere;
     PLATEAU *plateau;
@@ -10,14 +12,25 @@ typedef struct noeud{
     COORDS *mouvementOrigine;
     int profondeurActuelle;
     struct noeud **fils; // tableau de pointeur noeud fils
-} NOEUD, *P_NOEUD;
+} NOEUD, *P_NOEUD;*/
+
+typedef struct node{
+    struct node *father;
+    struct node **son;
+    struct node **remainingSon;
+    int victory;
+    int passage;
+    PLATEAU *board;
+    COORDS* movementOrigin;
+} NODE, *P_NODE;
 
 // fonction publique du module
 
+/*
 P_NOEUD nouveau_noeud(P_NOEUD pracinePere, PLATEAU *plateau, COORDS *coup);
 
 void detruitArbre(P_NOEUD pracine);
 
 COORDS* meilleur_coup(P_NOEUD pracine);
-
+*/
 #endif // ARBRE_H_INCLUDED
