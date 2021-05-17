@@ -6,11 +6,10 @@
 #include "arbre.h"
 #include "joust.h"
 
-#define PROFONDEUR 5
-#define DEBUG 0
+#define DEBUG 1
 
 #define Cp 0.3
-#define SIMULATION 100
+#define SIMULATION 3
 
 
 
@@ -47,239 +46,179 @@ int indexMaxValue(float * arrayToEvaluate, int size)
 P_NODE selectBestSon(P_NODE proot)
 {
     float *tmp = (float *) malloc(sizeof(float)); // array that will contain UCT value to each sons
-    for(int i = 0; i < proot->board->nbr_mouvements; i++)
+    for(int i = 0; i < proot->board->movements_nbr; i++)
     {
-        if(proot->son[i]->passage == 0 || totalPassage(proot) == 0) // infinite value
+        if(proot->son[i]->passage == 0 || totalPassage(proot) == 0){ // infinite value
+            printf("\n infinite value\n");
             return proot->son[i];
+        }
         tmp[i] = calculUCT(proot->son[i]);
+        printf("\nfils[%d] uct: %f\n", tmp[i]);
     }
-    return proot->son[indexMaxValue(tmp, proot->board->nbr_mouvements)];
+    return proot->son[indexMaxValue(tmp, proot->board->movements_nbr)];
 }
 
-int createSon(P_NODE proot)
+void createSon(P_NODE proot)
 {
-    proot->son = (P_NODE *) malloc(sizeof(P_NODE)*proot->board->nbr_mouvements);
-    PLATEAU *copyBoard = (PLATEAU *) malloc(sizeof(PLATEAU));
-    cloner_jeu(copyBoard, proot->board);
-    for(int i = 0; i < proot->board->nbr_mouvements; i++)
+    proot->son = (P_NODE *) malloc(sizeof(P_NODE)*proot->board->movements_nbr);
+    for(int i = 0; i < proot->board->movements_nbr; i++)
     {
+        BOARD *copyBoard = (BOARD *) malloc(sizeof(BOARD));
+        clone_game(copyBoard, proot->board);
         P_NODE tmp = (NODE *) malloc(sizeof(NODE));
         tmp->passage = 0;
         tmp->victory = 0;
         tmp->son = NULL;
+        proot->remainingSon = NULL;
         tmp->father = proot;
-        jouer_coup(copyBoard, proot->board->mouvements[i]);
+        play_move(copyBoard, proot->board->movements[i]);
         tmp->board = copyBoard;
-        tmp->movementOrigin = &proot->board->mouvements[i];
+        tmp->movementOrigin = &proot->board->movements[i];
+        proot->son[i] = tmp;
     }
 }
 
-COORDS* bestChoice(PLATEAU board)
+void propagate(P_NODE proot, int victory)
 {
+    while(proot->father != NULL)
+    {
+        proot->victory += victory;
+        proot->passage += 1;
+        #if DEBUG == 1
+        printf("chosen node");
+        debug_node(proot);
+        #endif // DEBUG
+        proot = proot->father;
+    }
+}
+
+// proot will always have at least one son
+P_NODE maxNode(P_NODE proot)
+{
+    P_NODE tmp = proot->son[0];
+    for(int i = 1; i < proot->board->movements_nbr; i++)
+    {
+        if(proot->son[i]->victory > tmp->victory)
+        {
+            tmp = proot->son[i];
+        }
+    }
+    return tmp;
+}
+
+COORDS* bestChoice(BOARD* board)
+{
+    P_NODE proot = (NODE *) malloc(sizeof(NODE));
+    BOARD *copyBoard = (BOARD *) malloc(sizeof(BOARD));
+    clone_game(copyBoard, board);
+    proot->father = NULL;
+    proot->son = NULL;
+    proot->remainingSon = NULL;
+    proot->victory = 0;
+    proot->passage = 0;
+    proot->board = copyBoard;
+    proot->movementOrigin = NULL;
     for(int i = 0; i < SIMULATION; i++)
     {
-        P_NODE proot = (P_NODE *) malloc(sizeof(P_NODE));
-        PLATEAU *copyBoard = (PLATEAU *) malloc(sizeof(PLATEAU));
-        cloner_jeu(copyBoard, proot->board);
-        proot->father = NULL;
-        proot->son = NULL;
-        proot->remainingSon = NULL;
-        proot->victory = 0;
-        proot->passage = 0;
-        proot->board = copyBoard;
-        proot->movementOrigin = NULL;
-        while(proot->passage > 0 ||proot->father == NULL)
+        printf("\n i: %d \n", i);
+        P_NODE tmp = proot;
+        printf("ok1");
+        while(tmp->passage > 0 || tmp->father == NULL)
         {
+            printf("ok2");
             // looking for best sons
-
+            if(tmp->son == NULL){
+                printf("ok3");
+                createSon(tmp);
+                printf("ok5");
+            }
+            tmp = selectBestSon(tmp); // TODO rajouter la création des enfants s'il n'existe pass
+            printf("ok6");
         }
         // simulate the current node
+        // 1. we end the game randomly
+        BOARD *tmpBoard = (BOARD *) malloc(sizeof(BOARD));
+        clone_game(tmpBoard, tmp->board);
+        finish_game_randomly(tmpBoard);
+        printf("ok7");
 
-    }
-
-
-
-    createSon(proot);
-    for(int i = 0; i < proot->board->nbr_mouvements; i++)
-    {
-        if(proot->son[i]->passage == 0 || totalPassage(proot) == 0){
-            rollOut();
-        }
-    }
-}
-
-void rollOut()
-{
-    return;
-}
-
-
-/*
-int evaluationNoeud(P_NOEUD pracine)
-{
-    if(pracine->profondeurActuelle % 2 == 0) // si la profondeur est paire alors les mouvements que contient le noeud correspondent au mouvement possible de l'ia
-        return (pracine->plateau->nbr_mouvements == 0) ? -20 : pracine->plateau->nbr_mouvements; // si l'ia ne peut plus jouer on renvoie -20. sinon son nombre de mouvement possible
-    else  // profondeur impaire. Le joueur adverse � fini son tour. C'est � l'ia de jou�. Le plateau contient les d�placement possible de l'ia
-        return (pracine->plateau->nbr_mouvements == 0) ? 20 : -pracine->plateau->nbr_mouvements; // si l'ia ne peut plus jouer on renvoie -20 sinon + le nombre de coup
-}
-
-void minMaxNoeud(P_NOEUD pracine)
-{
-    if(pracine->profondeurActuelle == PROFONDEUR || pracine->plateau->nbr_mouvements == 0) // si on est bout d'une feuille
-        pracine->evaluation = evaluationNoeud(pracine);
-    else{// sinon
-        if(pracine->profondeurActuelle % 2 == 1){ //les noeud situ� � une profondeur impaire correspondent au choix que peut faire l'ia
-            pracine->evaluation = pracine->fils[0]->evaluation;
-            for(int i = 1; i < pracine->plateau->nbr_mouvements; i++)
-            {
-                if(pracine->evaluation < pracine->fils[i]->evaluation)
-                    pracine->evaluation = pracine->fils[i]->evaluation;
-            }
-        }else{ // les noeuds paires correspondent au choix de l'adversaire
-            pracine->evaluation = pracine->fils[0]->evaluation;
-            for(int i = 1; i < pracine->plateau->nbr_mouvements; i++)
-            {
-                if(pracine->evaluation > pracine->fils[i]->evaluation)
-                    pracine->evaluation = pracine->fils[i]->evaluation;
-            }
-        }
-    }
-}
-
-
-P_NOEUD nouveau_noeud(P_NOEUD pracinePere, PLATEAU *plateau, COORDS *coup)
-{
-    P_NOEUD pracine = (NOEUD *) malloc(sizeof(NOEUD)); // on cr�e le noeud
-
-    PLATEAU *copyPlateau = (PLATEAU *) malloc(sizeof(PLATEAU));
-    cloner_jeu(copyPlateau, plateau); // on copie le plateau pour ne pas modifier le plateau du noeud pr�c�dent
-
-    // on rempli le noeud
-    if(pracinePere != NULL){
-        jouer_coup(copyPlateau, *coup); // on joue le coup pour avoir un plateau correspondant au choix potentiellement fait
-        pracine->profondeurActuelle = pracinePere->profondeurActuelle + 1;
-        pracine->mouvementOrigine = coup;
-    } else {
-        pracine->profondeurActuelle = 0;
-        pracine->mouvementOrigine = NULL;
-    }
-    pracine->pere = pracinePere;
-
-    pracine->plateau = copyPlateau;
-
-    // on rempli le tableau des fils via r�cursion
-    if(pracine->profondeurActuelle < PROFONDEUR && pracine->plateau->nbr_mouvements > 0) // si le noeud actuelle n'est pas assez profond on calcule les fils
-    {
-        pracine->fils = (P_NOEUD *) malloc(sizeof(P_NOEUD)*pracine->plateau->nbr_mouvements);
-        for(int i = 0; i < pracine->plateau->nbr_mouvements; i++)
+        // 2. we check if we lose or win
+        if(tmpBoard->player != proot->board->player) // victory
         {
-            pracine->fils[i] = nouveau_noeud(pracine, copyPlateau, &(copyPlateau->mouvements[i]));
-        }
-    } else  // on ne calcule pas les fils, on a atteint la profondeur max ou bien il n'y a aucun fils
-        pracine->fils = NULL;
-    minMaxNoeud(pracine);
-
-    #if DEBUG == 1
-    debug_noeud(pracine);
-    #endif // DEBUG
-
-    return pracine;
-}
-
-void detruitArbre(P_NOEUD pracine)
-{
-    if(pracine == NULL)
-        return;
-    if(pracine->fils != NULL){
-        for(int i = 0; i < pracine->plateau->nbr_mouvements; i++)
-        {
-            detruitArbre(pracine->fils[i]);
-        }
-        pracine->fils = NULL;
-    }
-    // on lib�re toutes les allocations dynamique que contient un noeud et on termine par le noeud lui m�me
-    free(pracine->plateau->mouvements);
-    free(pracine->plateau);
-    free(pracine->fils);
-    free(pracine);
-    #if DEBUG == 1
-    printf("noeud detruit\n");
-    #endif // DEBUG
-}
-
-COORDS* meilleur_coup(P_NOEUD pracine)
-{
-    P_NOEUD maxFils = (NOEUD *) malloc(sizeof(NOEUD));
-    maxFils->evaluation = pracine->fils[0]->evaluation;
-    maxFils->mouvementOrigine = pracine->fils[0]->mouvementOrigine;
-    for(int i = 1; i < pracine->plateau->nbr_mouvements; i++) // on d�termine le fils ayant la plus haut �valuation
-    {
-        if(maxFils->evaluation < pracine->fils[i]->evaluation)
-        {
-            maxFils->evaluation = pracine->fils[i]->evaluation;
-            maxFils->mouvementOrigine = pracine->fils[i]->mouvementOrigine;
+            printf("ok8");
+            propagate(tmp, 1); // 3. we propagate the result
+        } else { // loss
+            printf("ok9");
+            propagate(tmp, 0); // 3. we propagate the result
         }
     }
-    return maxFils->mouvementOrigine;
+    printf("ok10");
+    return maxNode(proot)->movementOrigin;
 }
 
 
-/// debug fonction utiliser pour le d�buguage
-/// attention certaines portions de code pourrais �tre consid�r� comme n'�tant pas propre.
-/// l'id�e �tait surtout de me faire gagner du temps dans mes test.Puisque c'est fonctionnalit� ne sont pas explicitement demand� dans l'intitul� du sujet je me suis permis de les �crire en vitesse.
+// TODO destroy useless part of the tree
 
 
 
-int get_fils_numero(P_NOEUD pracine)
+
+
+
+/// debug fonction utiliser pour le débuguage
+/// attention certaines portions de code pourrais être considéré comme n'étant pas propre.
+/// l'idée était surtout de me faire gagner du temps dans mes test.Puisque ces fonctionnalités ne sont pas explicitement demandé dans l'intitulé du sujet je me suis permis de les �crire en vitesse.
+
+int get_son_number(P_NODE proot)
 {
-   if(pracine->pere == NULL)
-    {
+    if(proot->father == NULL)
         return 0;
-    } else {
-        for(int i = 0; i < pracine->pere->plateau->nbr_mouvements; i++)
+    else
+    {
+        for(int i = 0; i < proot->father->board->movements_nbr; i++)
         {
-            if(pracine->pere->plateau->mouvements[i].x == pracine->mouvementOrigine->x && pracine->pere->plateau->mouvements[i].y == pracine->mouvementOrigine->y)
+            if(proot->father->board->movements[i].x == proot->movementOrigin->x && proot->father->board->movements[i].y == proot->movementOrigin->y)
                 return i;
         }
-        return 100; // impossible donc on sait que c'est une erreur
+        return 10000; // impossible donc on sait que c'est une erreur
     }
 }
 
-size_t max_ligne(char **ligne, int nombreLigne)
+size_t max_row(char **row, int rowNumber)
 {
-    size_t max = strlen(ligne[0]);
-    for(int i = 1; i < nombreLigne; i++)
+    size_t max = strlen(row[0]);
+    for(int i = 1; i < rowNumber; i++)
     {
-        if(strlen(ligne[i]) > max)
-            max = strlen(ligne[i]);
+        if(strlen(row[i]) > max)
+            max = strlen(row[i]);
     }
     return max;
 }
 
-void affiche_message(char **ligne, int nombreLigne)
+void display_message(char **row, int rowNumber)
 {
+    printf("\n\n\n\n");
     printf("\t");// ligne 1
-    for(size_t i = 2; i < max_ligne(ligne, nombreLigne); i++)
+    for(size_t i = 2; i < max_row(row, rowNumber); i++)
     {
         printf("#");
     }
     printf("\n");
 
     printf("\t#"); // ligne 2
-    for(size_t i = 4; i < max_ligne(ligne, nombreLigne); i++)
+    for(size_t i = 4; i < max_row(row, rowNumber); i++)
     {
         printf(" ");
     }
     printf("#");
     printf("\n");
 
-    for(int i = 0; i < nombreLigne; i++) // print les lignes de contenue
+    for(int i = 0; i < rowNumber; i++) // print les lignes de contenue
     {
-        printf("%s", ligne[i]);
+        printf("%s", row[i]);
     }
 
     printf("\t#"); // ligne 4
-    for(size_t i = 4; i < max_ligne(ligne, nombreLigne); i++)
+    for(size_t i = 4; i < max_row(row, rowNumber); i++)
     {
         printf(" ");
     }
@@ -287,7 +226,7 @@ void affiche_message(char **ligne, int nombreLigne)
     printf("\n");
 
     printf("\t");// ligne 5
-    for(size_t i = 2; i < max_ligne(ligne, nombreLigne); i++)
+    for(size_t i = 2; i < max_row(row, rowNumber); i++)
     {
         printf("#");
     }
@@ -295,37 +234,37 @@ void affiche_message(char **ligne, int nombreLigne)
 }
 
 
-void debug_noeud(P_NOEUD pracine)
+void debug_node(P_NODE proot)
 {
-    if(pracine != NULL)
+    if(proot != NULL)
     {
-        char ligne1[100];
-        char ligne2[100];
-        char ligne3[100];
-        char ligne4[100];
-        char ligne5[100];
-        int nombreLigne = 5;
-        char *tline[5] = {ligne1, ligne2, ligne3, ligne4, ligne5};
+        char row1[100];
+        char row2[100];
+        char row3[100];
+        char row4[100];
+        char row5[100];
+        int rowNumber = 5;
+        char *rowArray[5] = {row1, row2, row3, row4, row5};
 
-        sprintf(ligne1, "\t#    profondeur: %d    fils: %d", pracine->profondeurActuelle, get_fils_numero(pracine));
-        sprintf(ligne2, "\t#    evaluation: %d", pracine->evaluation);
-        sprintf(ligne3, "\t#    nombre_mouvement plateau: %d", pracine->plateau->nbr_mouvements);
-        sprintf(ligne4, "\t#    joueur: %d", pracine->plateau->joueur+1);
-        sprintf(ligne5, "\t#    coup fait avant: [%d,%d]", pracine->mouvementOrigine->x, pracine->mouvementOrigine->y);
+        sprintf(row4, "\t#    son number: %d", get_son_number(proot));
+        sprintf(row1, "\t#    passage: %d", proot->passage);
+        sprintf(row2, "\t#    victory: %d", proot->victory);
+        sprintf(row3, "\t#    movementOrigin: [%d, %d]", proot->movementOrigin->x, proot->movementOrigin->y);
+        sprintf(row5, "\t#    player: %d", proot->board->player+1);
 
-        size_t max = max_ligne(tline, nombreLigne);
-        for(int i = 0; i < nombreLigne; i++)
+        size_t max = max_row(rowArray, rowNumber);
+        for(int i = 0; i < rowNumber; i++)
         {
-            int tmp = strlen(tline[i]);
+            int tmp = strlen(rowArray[i]);
             for(size_t j = 0; j < max-tmp; j++)
             {
-                strcat(tline[i], " ");
+                strcat(rowArray[i], " ");
             }
-            strcat(tline[i], "    #\n");
+            strcat(rowArray[i], "    #\n");
         }
-        affiche_message(tline, nombreLigne);
-        afficher_jeu(pracine->plateau);
-        printf("\n\n\n");
+        display_message(rowArray, rowNumber);
+        display_game(proot->board);
+        printf("\n\n\n\n");
     }
 }
-*/
+

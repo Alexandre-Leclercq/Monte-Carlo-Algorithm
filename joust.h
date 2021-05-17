@@ -3,7 +3,7 @@
 
 // le carré de la taille du damier (= nombre de cases du damier) doit être impair
 // sinon le joueur 2 a une stratégie gagnante à tous les coups
-#define TAILLE 7
+#define SIZE 7
 
 // ascii constants
 #define TOPLEFTCORNER 201
@@ -19,11 +19,11 @@
 #define BOTTOMRIGHTCORNER 188
 
 // symboles "graphiques"
-#define LIBRE ' '
-#define BRULE 219 // ascii value
-static char SYMBOLE[2] = {'1', '2'}; // symboles joueurs
+#define FREE ' '
+#define BURNED 219 // ascii value
+static char SYMBOL[2] = {'1', '2'}; // symboles joueurs
 
-typedef char DAMIER[TAILLE][TAILLE];
+typedef char CHECKERBOARD[SIZE][SIZE];
 typedef struct {
 	int x, y;
 } COORDS;
@@ -32,20 +32,20 @@ typedef struct {
 // par adresse/pointeur pour avoir une "API" plus régulière (et économiser de
 // la place sur la pile mémoire)
 typedef struct {
-	DAMIER damier;
+	CHECKERBOARD checkerboard;
 	COORDS coords[2]; // coords des 2 joueurs
-	int joueur; // numéro de joueur courant
-	COORDS *mouvements; // tableau *à allouer* de mvts possible pour joueur courant
+	int player; // numéro de joueur courant
+	COORDS *movements; // tableau *à allouer* de mvts possible pour joueur courant
 						// ce tableau sera maintenu à jour à chaque coup
-	int nbr_mouvements;  // taille utile du tableau (pas forcément plein)
-} PLATEAU;
+	int movements_nbr;  // taille utile du tableau (pas forcément plein)
+} BOARD;
 
-typedef void (*FN_PLAY)(PLATEAU* plateau);
+typedef void (*FN_PLAY)(BOARD* board);
 
-void cloner_jeu(PLATEAU *pl2, PLATEAU *pl1);
+void clone_game(BOARD *pl2, BOARD *pl1);
 
-void jouer_coup(PLATEAU *plateau, COORDS coup);
+void play_move(BOARD *plateau, COORDS chosenMove);
 
-void afficher_jeu(PLATEAU *plateau);
+void display_game(BOARD *board);
 
 #endif // JOUST_H_INCLUDED

@@ -20,11 +20,13 @@ typedef struct node{
     struct node **remainingSon;
     int victory;
     int passage;
-    PLATEAU *board;
+    BOARD *board;
     COORDS* movementOrigin;
 } NODE, *P_NODE;
 
 // fonction publique du module
+
+COORDS* bestChoice(BOARD* board);
 
 /*
 P_NOEUD nouveau_noeud(P_NOEUD pracinePere, PLATEAU *plateau, COORDS *coup);

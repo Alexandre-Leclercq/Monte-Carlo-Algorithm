@@ -7,7 +7,7 @@
  *  jouer non plus sur la case occupée par l'autre joueur)
 */
 
-#define DEBUG 0
+#define DEBUG 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,26 +18,26 @@
 #include "arbre.h"
 
 
-void placer(PLATEAU *plateau, COORDS coords, char symbole) {
+void place(BOARD *board, COORDS coords, char symbol) {
 	// place un symbole à une coord donnée du plateau
-	plateau->damier[coords.x][coords.y] = symbole;
+	board->checkerboard[coords.x][coords.y] = symbol;
 }
 
-void afficher_jeu(PLATEAU *plateau) {
+void display_game(BOARD *board) {
     // print the top row of the table
     printf("\t ");
-    for(int i = 0; i < TAILLE; i++)
+    for(int i = 0; i < SIZE; i++)
     {
         printf(" %d", i);
     }
     printf("\n");
 
     printf("\t %c", TOPLEFTCORNER);
-    for(int j = 0; j < TAILLE; j++)
+    for(int j = 0; j < SIZE; j++)
     {
         printf("%c", HORIZONTALROW);
 
-        if(j+1 < TAILLE)
+        if(j+1 < SIZE)
             printf("%c", TOPCORNER);
         else
             printf("%c", TOPRIGHTCORNER);
@@ -45,24 +45,24 @@ void afficher_jeu(PLATEAU *plateau) {
     printf("\n");
 
     // print the content of the table
-    for(int i = 0; i < TAILLE; i++)
+    for(int i = 0; i < SIZE; i++)
     {
         printf("\t%d%c", i, VERTICALROW); // print row of content
-        for(int j = 0; j < TAILLE; j++)
+        for(int j = 0; j < SIZE; j++)
         {
-            printf("%c", plateau->damier[i][j]);
+            printf("%c", board->checkerboard[i][j]);
             printf("%c", VERTICALROW);
         }
         printf("\n");
 
-        if(i+1 >= TAILLE)
+        if(i+1 >= SIZE)
             continue;
 
         printf("\t %c", LEFTCORNER); // print separator row
-        for(int j = 0; j < TAILLE; j++)
+        for(int j = 0; j < SIZE; j++)
         {
             printf("%c", HORIZONTALROW);
-            if(j+1 < TAILLE)
+            if(j+1 < SIZE)
             printf("%c", CENTRALCORNER);
             else
                 printf("%c", RIGHTCORNER);
@@ -72,11 +72,11 @@ void afficher_jeu(PLATEAU *plateau) {
 
     // print the bottom row of the table
     printf("\t %c", BOTTOMLEFTCORNER);
-    for(int j = 0; j < TAILLE; j++)
+    for(int j = 0; j < SIZE; j++)
     {
         printf("%c", HORIZONTALROW);
 
-        if(j+1 < TAILLE)
+        if(j+1 < SIZE)
             printf("%c", BOTTOMCORNER);
         else
             printf("%c", BOTTOMRIGHTCORNER);
@@ -84,83 +84,98 @@ void afficher_jeu(PLATEAU *plateau) {
     printf("\n\n");
 }
 
-void cloner_jeu(PLATEAU *pl2, PLATEAU *pl1) {
+void clone_game(BOARD *pl2, BOARD *pl1) {
 	// copie pl1 dans pl2 avec la copie bloc mémoire: memcpy(*dest, *source, taille_bloc)
-	memcpy(pl2, pl1, sizeof(PLATEAU));
-	pl2->mouvements = (COORDS *) malloc(sizeof(COORDS) * 8); // attention c'est pointé
-	memcpy(pl2->mouvements, pl1->mouvements, sizeof(COORDS)*8);
+	memcpy(pl2, pl1, sizeof(BOARD));
+	pl2->movements = (COORDS *) malloc(sizeof(COORDS) * 8); // attention c'est pointé
+	memcpy(pl2->movements, pl1->movements, sizeof(COORDS)*8);
 }
 
-int generer_mouvements_possibles(PLATEAU *plateau, COORDS *mvts, int joueur) {
+int generate_possible_movements(BOARD *board, COORDS *mvts, int player) {
 	// place dans le vecteur mvts les coords des mouvements possibles pour le
 	// n° du joueur indiqué, retourne le nombre de coords effectivement écrites dans mvts
 
 	int X[8] = {+1, +2, +2, +1, -1, -2, -2, -1};  // vecteur décalage X mvt de cavalier
 	int Y[8] = {-2, -1, +1, +2, +2, +1, -1, -2};  // vecteur décalage Y mvt de cavalier
-	int prochain = 0; // indice prochaine destination à écrire
+	int next = 0; // indice prochaine destination à écrire
 	for (int dir = 0; dir < 8; dir++) {  // énumère les directions possibles
 		// calcule la position "cible"
-		COORDS tmp = plateau->coords[joueur];  // position initiale
+		COORDS tmp = board->coords[player];  // position initiale
 		tmp.x += X[dir]; // ajout décalage X puis Y
 		tmp.y += Y[dir];
 		// teste et mémorise si autorisé
-		if (tmp.x >= 0 && tmp.x < TAILLE && tmp.y >= 0 && tmp.y < TAILLE &&
-			plateau->damier[tmp.x][tmp.y] == LIBRE) {
-			mvts[prochain] = tmp; // ok, mémoriser
-			prochain += 1;
+		if (tmp.x >= 0 && tmp.x < SIZE && tmp.y >= 0 && tmp.y < SIZE &&
+			board->checkerboard[tmp.x][tmp.y] == FREE) {
+			mvts[next] = tmp; // ok, mémoriser
+			next += 1;
 		}
 	}
-	return prochain; // par convention: marqueur de fin de liste
+	return next; // par convention: marqueur de fin de liste
 }
 
-void init_jeu(PLATEAU *plateau) {
+void init_game(BOARD *board) {
 	// initialise une partie
-	for (int i = 0; i < TAILLE; i++) {
-		for (int j = 0; j < TAILLE; j++) {
-			plateau->damier[i][j] = LIBRE;
+	for (int i = 0; i < SIZE; i++) {
+		for (int j = 0; j < SIZE; j++) {
+			board->checkerboard[i][j] = FREE;
 		}
 	}
 	// positions initiales
-	plateau->coords[0].x = plateau->coords[0].y = 1;
-	plateau->coords[1].x = plateau->coords[1].y = TAILLE - 2;
-	placer(plateau, plateau->coords[0], SYMBOLE[0]);  // le symbole joueur 1
-	placer(plateau, plateau->coords[1], SYMBOLE[1]);  // le symbole joueur 2
-	plateau->joueur = rand()%2; // détermine 1er joueur aléatoirement
+	board->coords[0].x = board->coords[0].y = 1;
+	board->coords[1].x = board->coords[1].y = SIZE - 2;
+	place(board, board->coords[0], SYMBOL[0]);  // le symbole joueur 1
+	place(board, board->coords[1], SYMBOL[1]);  // le symbole joueur 2
+	board->player = rand()%2; // détermine 1er joueur aléatoirement
 	// mémorise les coups possibles (tableau avec un marqueur de fin
 	// un peu comme une chaîne de caractères)
-	plateau->mouvements = (COORDS *) malloc(sizeof(COORDS) * 8); // alloue la place
-	plateau->nbr_mouvements = generer_mouvements_possibles(plateau, plateau->mouvements, plateau->joueur); // init mouvements possibles
+	board->movements = (COORDS *) malloc(sizeof(COORDS) * 8); // alloue la place
+	board->movements_nbr = generate_possible_movements(board, board->movements, board->player); // init mouvements possibles
 }
 
-int perdant(PLATEAU *plateau) {
+int loser(BOARD *board) {
 	// joueur courant perdant si et seulement si plus de mouvement possible
-	return (plateau->nbr_mouvements == 0);
+	return (board->movements_nbr == 0);
 }
 
-int gagnant(PLATEAU *plateau) {
-	if (plateau->nbr_mouvements == 0)
-		return (plateau->joueur + 1) % 2;
+int end_game(BOARD *board) {
+	// fin du jeu seulement si le joueur courant est perdant
+	return loser(board);
+}
+
+void finish_game_randomly(BOARD *board) {
+	// termine aléatoirement la partie courante, qui est modifiée (donc la cloner avant si nécessaire)
+	while (!end_game(board)) {
+		// tirer au sort un numéro de mouvement (attention : tirage de faible qualité ici)
+		int choice = rand() % board->movements_nbr;
+		// jouer coup et changer de joueur
+		play_move(board, board->movements[choice]);
+	}
+}
+
+int winner(BOARD *board) {
+	if (board->movements_nbr == 0)
+		return (board->player + 1) % 2;
 	else
         return -1; // convention pas encore de gagnant
 }
 
-void jouer_coup(PLATEAU *plateau, COORDS coup) {
+void play_move(BOARD *board, COORDS chosenMove) {
 	// effectue le coup du joueur courant à l'endroit
 	// spécifié par les coords de coup (ne vérifie pas si le coup est correct)
 
 	// rendre la case du joueur courant inaccessible
-	placer(plateau, plateau->coords[plateau->joueur], BRULE);
+	place(board, board->coords[board->player], BURNED);
 	// changer les coords du joueur courant
-	plateau->coords[plateau->joueur].x = coup.x;
-	plateau->coords[plateau->joueur].y = coup.y;
+	board->coords[board->player].x = chosenMove.x;
+	board->coords[board->player].y = chosenMove.y;
 	// placer le symbole joueur courant
-	placer(plateau, plateau->coords[plateau->joueur], SYMBOLE[plateau->joueur]);
+	place(board, board->coords[board->player], SYMBOL[board->player]);
 	// passer au joueur suivant
-	plateau->joueur = (plateau->joueur + 1) % 2;
+	board->player = (board->player + 1) % 2;
 	// re-générer les mouvements possibles (ne pas oublier)
-	plateau->nbr_mouvements = generer_mouvements_possibles(plateau,
-															plateau->mouvements,
-															 plateau->joueur);
+	board->movements_nbr = generate_possible_movements(board,
+															board->movements,
+															 board->player);
 }
 
 /**
@@ -170,83 +185,79 @@ void jouer_coup(PLATEAU *plateau, COORDS coup) {
 */
 int* role()
 {
-    int* joueurRole = (int *) malloc(sizeof(int) * 2);
+    int* playerRole = (int *) malloc(sizeof(int) * 2);
     for(int i = 0; i < 2; i++)
     {
-        joueurRole[i] = 0;
-        while(joueurRole[i] != 1 && joueurRole[i] != 2 && joueurRole[i] != 3){
-            printf("========    Joueur %d    ========\n", i+1);
-            printf("1. humain\n");
-            printf("2. aleatoire\n");
-            printf("3. ia\n");
-            scanf(" %d", (joueurRole+i));
+        playerRole[i] = 0;
+        while(playerRole[i] != 1 && playerRole[i] != 2 && playerRole[i] != 3){
+            printf("========    Player %d    ========\n", i+1);
+            printf("1. human\n");
+            printf("2. random\n");
+            printf("3. AI\n");
+            scanf(" %d", (playerRole+i));
             printf("\n\n");
             getchar(); // on vide le buffer pour la prochaine boucle si jamais ce qu'à rentré l'utilisateur ne match pas avec le paterne du scanf
         }
     }
-    return joueurRole;
+    return playerRole;
 }
 
-void humainJoue(PLATEAU* plateau)
+void humanPlay(BOARD* board)
 {
-    int choix = 0;
-    printf("========    JOUEUR %d    ========\n", plateau->joueur+1);
-    while(choix < 1 || choix > plateau->nbr_mouvements)
+    int choice = 0;
+    printf("========    PLAYER %d    ========\n", board->player+1);
+    while(choice < 1 || choice > board->movements_nbr)
     {
-        for(int i = 0; i < plateau->nbr_mouvements; i++)
+        for(int i = 0; i < board->movements_nbr; i++)
         {
-            printf("\t%d. [%d, %d]\n", i+1, ((plateau->mouvements)+i)->x, ((plateau->mouvements)+i)->y);
+            printf("\t%d. [%d, %d]\n", i+1, ((board->movements)+i)->x, ((board->movements)+i)->y);
         }
         printf("\n");
-        scanf( "%d", &choix);
-        printf("\n choix: %d\n", choix);
+        scanf( "%d", &choice);
+        printf("\n choice: %d\n", choice);
         printf("\n");
     }
-    jouer_coup(plateau, plateau->mouvements[choix-1]);
+    play_move(board, board->movements[choice-1]);
 }
 
-void randomJoue(PLATEAU* plateau)
+void randomPlay(BOARD* board)
 {
-    int choix = rand() % plateau->nbr_mouvements;
-    jouer_coup(plateau, plateau->mouvements[choix]);
+    int choice = rand() % board->movements_nbr;
+    play_move(board, board->movements[choice]);
 }
 
-void iaJoue(PLATEAU* plateau)
+
+void aiPlay(BOARD* board)
 {
-    P_NOEUD pracine = nouveau_noeud(NULL, plateau, NULL); // on créer l'arbre
-    COORDS *mouvement = meilleur_coup(pracine); // on récupère le meilleur coup
-    printf("l\'IA joue: [%d, %d]\n\n", mouvement->x, mouvement->y); // on l'affiche pour que le joueur humain sache quel coup viens de faire l'ia
-    #if DEBUG == 1
-    return; // en mode debug on veut juste afficher l'arbre et le meilleur coup. On ne fait pas une partie
-    #endif // DEBUG
-    jouer_coup(plateau, *mouvement); // on joue le coup
-    detruitArbre(pracine); // on détruit l'arbre
+    COORDS* movement = bestChoice(board);
+    printf("\n[%d, %d]\n", movement->x, movement->y);
+    //play_move(board, *movement);
 }
 
 int main()
 {
-	int *joueurRole = role();
+	int *playerRole = role();
 
-	PLATEAU plateau;
-	FN_PLAY jouer[] = {humainJoue, randomJoue, iaJoue};
+	BOARD board;
+	FN_PLAY play[] = {humanPlay, randomPlay, aiPlay};
 
     long graine_alea = 0;
 	srand(graine_alea); // init générateur (pseudo-aléatoire)
 
-	init_jeu(&plateau);
-	afficher_jeu(&plateau);
+	init_game(&board);
+	display_game(&board);
 
 	#if DEBUG == 1 // on appelle juste une fois la fonction iaJoue pour test
-        iaJoue(&plateau);
+        aiPlay(&board);
         return 0;
     #endif // DEBUG
-	while(!perdant(&plateau))
+	while(!loser(&board))
     {
-            if(perdant(&plateau))
+            if(loser(&board))
                 break;
-            jouer[joueurRole[plateau.joueur]-1](&plateau); // le joueur courant joue son tour
-            afficher_jeu(&plateau);
+            play[playerRole[board.player]-1](&board); // le joueur courant joue son tour
+            display_game(&board);
     }
-    printf("le gagnant est le joueur %c\n", SYMBOLE[gagnant(&plateau)]);
+    printf("winner is player %c\n", SYMBOL[winner(&board)]);
 }
 
