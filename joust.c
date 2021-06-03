@@ -7,7 +7,7 @@
  *  jouer non plus sur la case occupée par l'autre joueur)
 */
 
-#define DEBUG 1
+#define DEBUG 0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -230,6 +230,7 @@ void randomPlay(BOARD* board)
 void aiPlay(BOARD* board)
 {
     COORDS* movement = bestChoice(board);
+    play_move(board, *movement);
     printf("\n[%d, %d]\n", movement->x, movement->y);
     //play_move(board, *movement);
 }

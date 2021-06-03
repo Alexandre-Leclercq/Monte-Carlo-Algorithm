@@ -2,10 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
+#include "arbre.h"
 
 int main()
 {
-    printf("%f", log(0)/0);
-    return 0;
+    P_NODE test = (P_NODE *)malloc(sizeof(P_NODE)*5);
 }

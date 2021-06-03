@@ -9,7 +9,7 @@
 #define DEBUG 1
 
 #define Cp 0.3
-#define SIMULATION 3
+#define SIMULATION 10
 
 
 
@@ -19,11 +19,12 @@ int totalPassage(P_NODE proot)
     {
         proot = proot->father;
     }
+    printf("\n total passage: %d", proot->passage);
     return proot->passage;
 }
 
 
-int calculUCT(P_NODE proot)
+float calculUCT(P_NODE proot)
 {
     return proot->victory + 2*Cp*sqrt((2*log(totalPassage(proot)))/proot->passage);
 }
@@ -45,15 +46,16 @@ int indexMaxValue(float * arrayToEvaluate, int size)
 
 P_NODE selectBestSon(P_NODE proot)
 {
-    float *tmp = (float *) malloc(sizeof(float)); // array that will contain UCT value to each sons
+    float tmp[proot->board->movements_nbr]; // array that will contain UCT value to each sons
     for(int i = 0; i < proot->board->movements_nbr; i++)
     {
+        printf("\nj: %d\n", i);
         if(proot->son[i]->passage == 0 || totalPassage(proot) == 0){ // infinite value
             printf("\n infinite value\n");
             return proot->son[i];
         }
         tmp[i] = calculUCT(proot->son[i]);
-        printf("\nfils[%d] uct: %f\n", tmp[i]);
+        printf("\nfils[%d] uct: %f\n", i, tmp[i]);
     }
     return proot->son[indexMaxValue(tmp, proot->board->movements_nbr)];
 }
@@ -84,12 +86,11 @@ void propagate(P_NODE proot, int victory)
     {
         proot->victory += victory;
         proot->passage += 1;
-        #if DEBUG == 1
-        printf("chosen node");
-        debug_node(proot);
-        #endif // DEBUG
         proot = proot->father;
     }
+    proot->victory += victory;
+    proot->passage += 1;
+
 }
 
 // proot will always have at least one son
@@ -133,6 +134,8 @@ COORDS* bestChoice(BOARD* board)
                 printf("ok5");
             }
             tmp = selectBestSon(tmp); // TODO rajouter la création des enfants s'il n'existe pass
+            printf("\n === Selected Son ===\n");
+            debug_node(tmp);
             printf("ok6");
         }
         // simulate the current node
@@ -151,6 +154,10 @@ COORDS* bestChoice(BOARD* board)
             printf("ok9");
             propagate(tmp, 0); // 3. we propagate the result
         }
+        #if DEBUG == 1
+        printf("\n === chosen node === \n");
+        debug_node(tmp);
+        #endif // DEBUG
     }
     printf("ok10");
     return maxNode(proot)->movementOrigin;
@@ -246,10 +253,15 @@ void debug_node(P_NODE proot)
         int rowNumber = 5;
         char *rowArray[5] = {row1, row2, row3, row4, row5};
 
-        sprintf(row4, "\t#    son number: %d", get_son_number(proot));
         sprintf(row1, "\t#    passage: %d", proot->passage);
         sprintf(row2, "\t#    victory: %d", proot->victory);
-        sprintf(row3, "\t#    movementOrigin: [%d, %d]", proot->movementOrigin->x, proot->movementOrigin->y);
+        if(proot->father == NULL){
+            sprintf(row3, "\t#    movementOrigin: [NULL]");
+            sprintf(row4, "\t#    son number: NULL");
+        } else {
+            sprintf(row3, "\t#    movementOrigin: [%d, %d]", proot->movementOrigin->x, proot->movementOrigin->y);
+            sprintf(row4, "\t#    son number: %d", get_son_number(proot));
+        }
         sprintf(row5, "\t#    player: %d", proot->board->player+1);
 
         size_t max = max_row(rowArray, rowNumber);
