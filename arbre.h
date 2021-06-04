@@ -17,9 +17,11 @@ typedef struct noeud{
 typedef struct node{
     struct node *father;
     struct node **son;
-    struct node **remainingSon;
+    //struct node **remainingSon;
+    float averageVictory; // totalVictory / totalPassage du noeud --> always between 0 and 1
     int victory;
     int passage;
+    int ignore; // use as a boolean to say if we can select or not the node
     BOARD *board;
     COORDS* movementOrigin;
 } NODE, *P_NODE;

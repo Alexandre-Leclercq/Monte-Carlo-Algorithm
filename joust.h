@@ -3,7 +3,7 @@
 
 // le carré de la taille du damier (= nombre de cases du damier) doit être impair
 // sinon le joueur 2 a une stratégie gagnante à tous les coups
-#define SIZE 7
+#define SIZE 50
 
 // ascii constants
 #define TOPLEFTCORNER 201

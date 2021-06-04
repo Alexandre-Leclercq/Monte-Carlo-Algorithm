@@ -25,18 +25,27 @@ void place(BOARD *board, COORDS coords, char symbol) {
 
 void display_game(BOARD *board) {
     // print the top row of the table
-    printf("\t ");
+    printf("\t   ");
     for(int i = 0; i < SIZE; i++)
     {
-        printf(" %d", i);
+
+        printf("%d ", i);
+        if(i == 0)
+            printf(" ");
+        else{
+            for(int k = 0; k < floor(log10(SIZE))-floor(log10(i)); k++){
+                printf(" ");
+            }
+        }
     }
     printf("\n");
 
-    printf("\t %c", TOPLEFTCORNER);
+    printf("\t  %c", TOPLEFTCORNER);
     for(int j = 0; j < SIZE; j++)
     {
-        printf("%c", HORIZONTALROW);
-
+        for(int k = 0; k < log10(SIZE); k++){
+            printf("%c", HORIZONTALROW);
+        }
         if(j+1 < SIZE)
             printf("%c", TOPCORNER);
         else
@@ -47,10 +56,21 @@ void display_game(BOARD *board) {
     // print the content of the table
     for(int i = 0; i < SIZE; i++)
     {
-        printf("\t%d%c", i, VERTICALROW); // print row of content
+        printf("\t");
+        if(i == 0)
+            printf(" ");
+        else{
+            for(int k = 0; k < floor(log10(SIZE))-floor(log10(i)); k++){
+                printf(" ");
+            }
+        }
+        printf("%d%c", i, VERTICALROW); // print row of content
         for(int j = 0; j < SIZE; j++)
         {
-            printf("%c", board->checkerboard[i][j]);
+            for(int k = 0; k < log10(SIZE); k++){
+                printf("%c", board->checkerboard[i][j]);
+            }
+
             printf("%c", VERTICALROW);
         }
         printf("\n");
@@ -58,10 +78,12 @@ void display_game(BOARD *board) {
         if(i+1 >= SIZE)
             continue;
 
-        printf("\t %c", LEFTCORNER); // print separator row
+        printf("\t  %c", LEFTCORNER); // print separator row
         for(int j = 0; j < SIZE; j++)
         {
-            printf("%c", HORIZONTALROW);
+            for(int k = 0; k < log10(SIZE); k++){
+                printf("%c", HORIZONTALROW);
+            }
             if(j+1 < SIZE)
             printf("%c", CENTRALCORNER);
             else
@@ -71,11 +93,12 @@ void display_game(BOARD *board) {
     }
 
     // print the bottom row of the table
-    printf("\t %c", BOTTOMLEFTCORNER);
+    printf("\t  %c", BOTTOMLEFTCORNER);
     for(int j = 0; j < SIZE; j++)
     {
-        printf("%c", HORIZONTALROW);
-
+        for(int k = 0; k < log10(SIZE); k++){
+            printf("%c", HORIZONTALROW);
+        }
         if(j+1 < SIZE)
             printf("%c", BOTTOMCORNER);
         else

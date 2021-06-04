@@ -6,10 +6,10 @@
 #include "arbre.h"
 #include "joust.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define Cp 0.3
-#define SIMULATION 10
+#define SIMULATION 100
 
 
 
@@ -19,14 +19,14 @@ int totalPassage(P_NODE proot)
     {
         proot = proot->father;
     }
-    printf("\n total passage: %d", proot->passage);
+    //printf("\n total passage: %d", proot->passage);
     return proot->passage;
 }
 
 
 float calculUCT(P_NODE proot)
 {
-    return proot->victory + 2*Cp*sqrt((2*log(totalPassage(proot)))/proot->passage);
+    return proot->averageVictory + 2*Cp*sqrt((2*log(totalPassage(proot)))/proot->passage);
 }
 
 /**
@@ -49,13 +49,16 @@ P_NODE selectBestSon(P_NODE proot)
     float tmp[proot->board->movements_nbr]; // array that will contain UCT value to each sons
     for(int i = 0; i < proot->board->movements_nbr; i++)
     {
-        printf("\nj: %d\n", i);
+        //printf("\nj: %d\n", i);
         if(proot->son[i]->passage == 0 || totalPassage(proot) == 0){ // infinite value
-            printf("\n infinite value\n");
+            //printf("\n infinite value\n");
             return proot->son[i];
         }
-        tmp[i] = calculUCT(proot->son[i]);
-        printf("\nfils[%d] uct: %f\n", i, tmp[i]);
+        if(proot->son[i]->ignore == 1)
+            tmp[i] = 0;
+        else
+            tmp[i] = calculUCT(proot->son[i]);
+        //printf("\nfils[%d] uct: %f\n", i, tmp[i]);
     }
     return proot->son[indexMaxValue(tmp, proot->board->movements_nbr)];
 }
@@ -70,8 +73,9 @@ void createSon(P_NODE proot)
         P_NODE tmp = (NODE *) malloc(sizeof(NODE));
         tmp->passage = 0;
         tmp->victory = 0;
+        tmp->averageVictory = 0;
         tmp->son = NULL;
-        proot->remainingSon = NULL;
+        //proot->remainingSon = NULL;
         tmp->father = proot;
         play_move(copyBoard, proot->board->movements[i]);
         tmp->board = copyBoard;
@@ -82,15 +86,13 @@ void createSon(P_NODE proot)
 
 void propagate(P_NODE proot, int victory)
 {
-    while(proot->father != NULL)
+    while(proot != NULL) // if proot == NULL, it means proot is the father of the root which doesn't exist.
     {
         proot->victory += victory;
         proot->passage += 1;
+        proot->averageVictory = (float) proot->victory/proot->passage;
         proot = proot->father;
     }
-    proot->victory += victory;
-    proot->passage += 1;
-
 }
 
 // proot will always have at least one son
@@ -99,12 +101,27 @@ P_NODE maxNode(P_NODE proot)
     P_NODE tmp = proot->son[0];
     for(int i = 1; i < proot->board->movements_nbr; i++)
     {
-        if(proot->son[i]->victory > tmp->victory)
+        if(proot->son[i]->averageVictory > tmp->averageVictory)
         {
             tmp = proot->son[i];
         }
     }
     return tmp;
+}
+
+/**
+ * check if all the children are ignored and if yes ignore the father
+ */
+void ignoreFather(P_NODE pfather)
+{
+    for(int i = 0; i < pfather->board->movements_nbr; i++)
+    {
+        if(!pfather->son[i]->ignore)
+        {
+            return;
+        }
+    }
+    pfather->ignore = 1;
 }
 
 COORDS* bestChoice(BOARD* board)
@@ -114,52 +131,64 @@ COORDS* bestChoice(BOARD* board)
     clone_game(copyBoard, board);
     proot->father = NULL;
     proot->son = NULL;
-    proot->remainingSon = NULL;
+    //proot->remainingSon = NULL;
     proot->victory = 0;
+    proot->averageVictory = 0;
+    proot->ignore = 0;
     proot->passage = 0;
     proot->board = copyBoard;
     proot->movementOrigin = NULL;
     for(int i = 0; i < SIMULATION; i++)
     {
-        printf("\n i: %d \n", i);
+        //printf("\n i: %d \n", i);
         P_NODE tmp = proot;
-        printf("ok1");
+        //printf("ok1");
         while(tmp->passage > 0 || tmp->father == NULL)
         {
-            printf("ok2");
+            if(proot->ignore)
+                break;
+            //printf("ok2");
             // looking for best sons
             if(tmp->son == NULL){
-                printf("ok3");
+                //printf("ok3");
                 createSon(tmp);
-                printf("ok5");
+                //printf("ok5");
             }
             tmp = selectBestSon(tmp); // TODO rajouter la création des enfants s'il n'existe pass
+            #if DEBUG == 1
             printf("\n === Selected Son ===\n");
             debug_node(tmp);
             printf("ok6");
+            #endif // DEBUG
         }
-        // simulate the current node
-        // 1. we end the game randomly
-        BOARD *tmpBoard = (BOARD *) malloc(sizeof(BOARD));
-        clone_game(tmpBoard, tmp->board);
-        finish_game_randomly(tmpBoard);
-        printf("ok7");
+        if(end_game(tmp->board)){ // if the game is over for the current node
+            tmp->ignore = 1;
+            propagate(tmp, 0);
+            ignoreFather(tmp->father);
+        } else {
+            // simulate the current node
+            // 1. we end the game randomly
+            BOARD *tmpBoard = (BOARD *) malloc(sizeof(BOARD));
+            clone_game(tmpBoard, tmp->board);
+            finish_game_randomly(tmpBoard);
+            //printf("ok7");
 
-        // 2. we check if we lose or win
-        if(tmpBoard->player != proot->board->player) // victory
-        {
-            printf("ok8");
-            propagate(tmp, 1); // 3. we propagate the result
-        } else { // loss
-            printf("ok9");
-            propagate(tmp, 0); // 3. we propagate the result
+            // 2. we check if we lose or win
+            if(tmpBoard->player != proot->board->player) // victory
+            {
+                //printf("ok8");
+                propagate(tmp, 1); // 3. we propagate the result
+            } else { // loss
+                //printf("ok9");
+                propagate(tmp, 0); // 3. we propagate the result
+            }
+            #if DEBUG == 1
+            printf("\n === chosen node === \n");
+            debug_node(tmp);
+            #endif // DEBUG
         }
-        #if DEBUG == 1
-        printf("\n === chosen node === \n");
-        debug_node(tmp);
-        #endif // DEBUG
     }
-    printf("ok10");
+    //printf("ok10");
     return maxNode(proot)->movementOrigin;
 }
 
@@ -250,19 +279,21 @@ void debug_node(P_NODE proot)
         char row3[100];
         char row4[100];
         char row5[100];
+        char row6[100];
         int rowNumber = 5;
-        char *rowArray[5] = {row1, row2, row3, row4, row5};
+        char *rowArray[5] = {row1, row2, row3, row4, row5, row6};
 
         sprintf(row1, "\t#    passage: %d", proot->passage);
         sprintf(row2, "\t#    victory: %d", proot->victory);
+        sprintf(row3, "\t#    averageVictory: %f", proot->averageVictory);
         if(proot->father == NULL){
-            sprintf(row3, "\t#    movementOrigin: [NULL]");
-            sprintf(row4, "\t#    son number: NULL");
+            sprintf(row4, "\t#    movementOrigin: [NULL]");
+            sprintf(row5, "\t#    son number: NULL");
         } else {
-            sprintf(row3, "\t#    movementOrigin: [%d, %d]", proot->movementOrigin->x, proot->movementOrigin->y);
-            sprintf(row4, "\t#    son number: %d", get_son_number(proot));
+            sprintf(row4, "\t#    movementOrigin: [%d, %d]", proot->movementOrigin->x, proot->movementOrigin->y);
+            sprintf(row5, "\t#    son number: %d", get_son_number(proot));
         }
-        sprintf(row5, "\t#    player: %d", proot->board->player+1);
+        sprintf(row6, "\t#    player: %d", proot->board->player+1);
 
         size_t max = max_row(rowArray, rowNumber);
         for(int i = 0; i < rowNumber; i++)
