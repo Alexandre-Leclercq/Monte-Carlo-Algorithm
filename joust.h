@@ -3,7 +3,7 @@
 
 // le carré de la taille du damier (= nombre de cases du damier) doit être impair
 // sinon le joueur 2 a une stratégie gagnante à tous les coups
-#define SIZE 50
+#define SIZE 15
 
 // ascii constants
 #define TOPLEFTCORNER 201
@@ -21,7 +21,7 @@
 // symboles "graphiques"
 #define FREE ' '
 #define BURNED 219 // ascii value
-static char SYMBOL[2] = {'1', '2'}; // symboles joueurs
+static char SYMBOL[4] = {'1', '2', '3', '4'}; // symboles joueurs
 
 typedef char CHECKERBOARD[SIZE][SIZE];
 typedef struct {
@@ -33,7 +33,7 @@ typedef struct {
 // la place sur la pile mémoire)
 typedef struct {
 	CHECKERBOARD checkerboard;
-	COORDS coords[2]; // coords des 2 joueurs
+	COORDS coords[4]; // coords des 2 joueurs
 	int player; // numéro de joueur courant
 	COORDS *movements; // tableau *à allouer* de mvts possible pour joueur courant
 						// ce tableau sera maintenu à jour à chaque coup

@@ -6,10 +6,10 @@
 #include "arbre.h"
 #include "joust.h"
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define Cp 0.3
-#define SIMULATION 100
+#define SIMULATION 500
 
 
 
@@ -19,7 +19,7 @@ int totalPassage(P_NODE proot)
     {
         proot = proot->father;
     }
-    //printf("\n total passage: %d", proot->passage);
+    printf("\n total passage: %d", proot->passage);
     return proot->passage;
 }
 
@@ -49,16 +49,16 @@ P_NODE selectBestSon(P_NODE proot)
     float tmp[proot->board->movements_nbr]; // array that will contain UCT value to each sons
     for(int i = 0; i < proot->board->movements_nbr; i++)
     {
-        //printf("\nj: %d\n", i);
+        printf("\nj: %d\n", i);
         if(proot->son[i]->passage == 0 || totalPassage(proot) == 0){ // infinite value
-            //printf("\n infinite value\n");
+            printf("\n infinite value\n");
             return proot->son[i];
         }
         if(proot->son[i]->ignore == 1)
             tmp[i] = 0;
         else
             tmp[i] = calculUCT(proot->son[i]);
-        //printf("\nfils[%d] uct: %f\n", i, tmp[i]);
+        printf("\nfils[%d] uct: %f\n", i, tmp[i]);
     }
     return proot->son[indexMaxValue(tmp, proot->board->movements_nbr)];
 }
@@ -140,28 +140,29 @@ COORDS* bestChoice(BOARD* board)
     proot->movementOrigin = NULL;
     for(int i = 0; i < SIMULATION; i++)
     {
-        //printf("\n i: %d \n", i);
+        printf("\n i: %d \n", i);
         P_NODE tmp = proot;
-        //printf("ok1");
+        printf("ok1");
         while(tmp->passage > 0 || tmp->father == NULL)
         {
             if(proot->ignore)
                 break;
-            //printf("ok2");
+            printf("ok2");
             // looking for best sons
             if(tmp->son == NULL){
-                //printf("ok3");
+                printf("ok3");
                 createSon(tmp);
-                //printf("ok5");
+                printf("ok5");
             }
             tmp = selectBestSon(tmp); // TODO rajouter la création des enfants s'il n'existe pass
             #if DEBUG == 1
             printf("\n === Selected Son ===\n");
-            debug_node(tmp);
+            //debug_node(tmp);
             printf("ok6");
             #endif // DEBUG
         }
         if(end_game(tmp->board)){ // if the game is over for the current node
+            printf("az");
             tmp->ignore = 1;
             propagate(tmp, 0);
             ignoreFather(tmp->father);
@@ -171,24 +172,24 @@ COORDS* bestChoice(BOARD* board)
             BOARD *tmpBoard = (BOARD *) malloc(sizeof(BOARD));
             clone_game(tmpBoard, tmp->board);
             finish_game_randomly(tmpBoard);
-            //printf("ok7");
+            printf("ok7");
 
             // 2. we check if we lose or win
             if(tmpBoard->player != proot->board->player) // victory
             {
-                //printf("ok8");
+                printf("ok8");
                 propagate(tmp, 1); // 3. we propagate the result
             } else { // loss
-                //printf("ok9");
+                printf("ok9");
                 propagate(tmp, 0); // 3. we propagate the result
             }
             #if DEBUG == 1
             printf("\n === chosen node === \n");
-            debug_node(tmp);
+            //debug_node(tmp);
             #endif // DEBUG
         }
     }
-    //printf("ok10");
+    printf("ok10");
     return maxNode(proot)->movementOrigin;
 }
 

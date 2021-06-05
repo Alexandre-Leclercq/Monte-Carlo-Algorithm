@@ -146,9 +146,13 @@ void init_game(BOARD *board) {
 	// positions initiales
 	board->coords[0].x = board->coords[0].y = 1;
 	board->coords[1].x = board->coords[1].y = SIZE - 2;
+	board->coords[2].x = board->coords[3].y = 1;
+	board->coords[2].y = board->coords[3].x = SIZE - 2;
 	place(board, board->coords[0], SYMBOL[0]);  // le symbole joueur 1
 	place(board, board->coords[1], SYMBOL[1]);  // le symbole joueur 2
-	board->player = rand()%2; // détermine 1er joueur aléatoirement
+	place(board, board->coords[2], SYMBOL[2]);  // le symbole joueur 3
+	place(board, board->coords[3], SYMBOL[3]);  // le symbole joueur 4
+	board->player = rand()%4; // détermine 1er joueur aléatoirement
 	// mémorise les coups possibles (tableau avec un marqueur de fin
 	// un peu comme une chaîne de caractères)
 	board->movements = (COORDS *) malloc(sizeof(COORDS) * 8); // alloue la place
@@ -177,7 +181,7 @@ void finish_game_randomly(BOARD *board) {
 
 int winner(BOARD *board) {
 	if (board->movements_nbr == 0)
-		return (board->player + 1) % 2;
+		return (board->player + 1) % 4;
 	else
         return -1; // convention pas encore de gagnant
 }
@@ -194,11 +198,14 @@ void play_move(BOARD *board, COORDS chosenMove) {
 	// placer le symbole joueur courant
 	place(board, board->coords[board->player], SYMBOL[board->player]);
 	// passer au joueur suivant
-	board->player = (board->player + 1) % 2;
+	board->player = (board->player + 1) % 4;
 	// re-générer les mouvements possibles (ne pas oublier)
-	board->movements_nbr = generate_possible_movements(board,
-															board->movements,
-															 board->player);
+	board->movements_nbr = generate_possible_movements(board, board->movements, board->player);
+    while(board->movements_nbr == 0)
+    {
+        board->player = (board->player + 1) % 4;
+        board->movements_nbr = generate_possible_movements(board, board->movements, board->player);
+    }
 }
 
 /**
@@ -208,8 +215,8 @@ void play_move(BOARD *board, COORDS chosenMove) {
 */
 int* role()
 {
-    int* playerRole = (int *) malloc(sizeof(int) * 2);
-    for(int i = 0; i < 2; i++)
+    int* playerRole = (int *) malloc(sizeof(int) * 4);
+    for(int i = 0; i < 4; i++)
     {
         playerRole[i] = 0;
         while(playerRole[i] != 1 && playerRole[i] != 2 && playerRole[i] != 3){
@@ -264,6 +271,7 @@ int main()
 
 	BOARD board;
 	FN_PLAY play[] = {humanPlay, randomPlay, aiPlay};
+
 
     long graine_alea = 0;
 	srand(graine_alea); // init générateur (pseudo-aléatoire)
