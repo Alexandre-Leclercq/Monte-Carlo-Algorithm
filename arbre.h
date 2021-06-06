@@ -23,7 +23,7 @@ typedef struct node{
     int passage;
     int ignore; // use as a boolean to say if we can select or not the node
     BOARD *board;
-    COORDS* movementOrigin;
+    COORDS* lastMovement;
 } NODE, *P_NODE;
 
 // fonction publique du module

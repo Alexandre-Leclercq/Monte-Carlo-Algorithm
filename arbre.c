@@ -6,10 +6,10 @@
 #include "arbre.h"
 #include "joust.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define Cp 0.3
-#define SIMULATION 500
+#define SIMULATION 100
 
 
 
@@ -19,7 +19,6 @@ int totalPassage(P_NODE proot)
     {
         proot = proot->father;
     }
-    printf("\n total passage: %d", proot->passage);
     return proot->passage;
 }
 
@@ -49,16 +48,22 @@ P_NODE selectBestSon(P_NODE proot)
     float tmp[proot->board->movements_nbr]; // array that will contain UCT value to each sons
     for(int i = 0; i < proot->board->movements_nbr; i++)
     {
+        #if DEBUG == 1
         printf("\nj: %d\n", i);
+        #endif // DEBUG
         if(proot->son[i]->passage == 0 || totalPassage(proot) == 0){ // infinite value
+            #if DEBUG == 1
             printf("\n infinite value\n");
+            #endif // DEBUG
             return proot->son[i];
         }
         if(proot->son[i]->ignore == 1)
             tmp[i] = 0;
         else
             tmp[i] = calculUCT(proot->son[i]);
+        #if DEBUG == 1
         printf("\nfils[%d] uct: %f\n", i, tmp[i]);
+        #endif // DEBUG
     }
     return proot->son[indexMaxValue(tmp, proot->board->movements_nbr)];
 }
@@ -79,7 +84,7 @@ void createSon(P_NODE proot)
         tmp->father = proot;
         play_move(copyBoard, proot->board->movements[i]);
         tmp->board = copyBoard;
-        tmp->movementOrigin = &proot->board->movements[i];
+        tmp->lastMovement = &proot->board->movements[i];
         proot->son[i] = tmp;
     }
 }
@@ -114,6 +119,8 @@ P_NODE maxNode(P_NODE proot)
  */
 void ignoreFather(P_NODE pfather)
 {
+    if(pfather == NULL)
+        return;
     for(int i = 0; i < pfather->board->movements_nbr; i++)
     {
         if(!pfather->son[i]->ignore)
@@ -122,6 +129,48 @@ void ignoreFather(P_NODE pfather)
         }
     }
     pfather->ignore = 1;
+    ignoreFather(pfather->father);
+}
+
+int endOfBranch(int iaPlayerNumber, P_NODE pracine)
+{
+    BOARD *copyBoard = (BOARD *) malloc(sizeof(BOARD));
+    clone_game(copyBoard, pracine->board);
+    int iaWin = 1;
+    for(int i = 0; i < 4; i++) // for each player
+    {
+        if(copyBoard->player == iaPlayerNumber && copyBoard->movements_nbr == 0) // if the ia loose
+            return 1;
+        if(copyBoard->player != iaPlayerNumber && copyBoard->movements_nbr > 0) // if one other player is still alive
+            iaWin = 0;
+
+        // switch the board for the next player (without make any move)
+        copyBoard->player = (copyBoard->player + 1) % 4;
+        copyBoard->movements_nbr = generate_possible_movements(copyBoard, copyBoard->movements, copyBoard->player);
+    }
+    if(iaWin) // if the ia win
+        return 1;
+    return 0; // if the ia is still playing
+}
+
+/**
+ *
+ */
+void deleteTree(P_NODE proot)
+{
+    if(proot == NULL)
+        return;
+    for(int i = 0; i < proot->board->movements_nbr; i++) // for each sons
+    {
+        if(proot->son == NULL)
+            break;
+        deleteTree(proot->son[i]);
+    }
+    free(proot->board);
+    free(proot->son);
+    free(proot);
+    return;
+
 }
 
 COORDS* bestChoice(BOARD* board)
@@ -137,60 +186,73 @@ COORDS* bestChoice(BOARD* board)
     proot->ignore = 0;
     proot->passage = 0;
     proot->board = copyBoard;
-    proot->movementOrigin = NULL;
+    proot->lastMovement = NULL;
     for(int i = 0; i < SIMULATION; i++)
     {
+
+        #if DEBUG == 1
         printf("\n i: %d \n", i);
+        #endif // DEBUG
         P_NODE tmp = proot;
-        printf("ok1");
+        if(proot->ignore == 1)
+            break;
+        //printf("a");
         while(tmp->passage > 0 || tmp->father == NULL)
         {
-            if(proot->ignore)
-                break;
-            printf("ok2");
             // looking for best sons
-            if(tmp->son == NULL){
-                printf("ok3");
+            //printf("b");
+            if(tmp->son == NULL)
                 createSon(tmp);
-                printf("ok5");
-            }
+            //printf("c");
             tmp = selectBestSon(tmp); // TODO rajouter la création des enfants s'il n'existe pass
+            //printf("d");
             #if DEBUG == 1
             printf("\n === Selected Son ===\n");
-            //debug_node(tmp);
-            printf("ok6");
+            debug_node(tmp);
             #endif // DEBUG
         }
-        if(end_game(tmp->board)){ // if the game is over for the current node
-            printf("az");
+        //printf("z");
+        //printf("player ia: %d\n", proot->board->player);
+        //printf("current player: %d\n", tmp->board->player);
+        if(endOfBranch(proot->board->player, tmp)){ // if the game is over for the ia
             tmp->ignore = 1;
-            propagate(tmp, 0);
+            //printf("e");
+            if(winner(tmp->board) == proot->board->player) // if the ia won
+                propagate(tmp, 1);
+            else
+                propagate(tmp, 0);
+            //printf("f");
             ignoreFather(tmp->father);
+            //printf("g");
         } else {
             // simulate the current node
             // 1. we end the game randomly
+            //printf("h");
             BOARD *tmpBoard = (BOARD *) malloc(sizeof(BOARD));
+            //printf("i");
             clone_game(tmpBoard, tmp->board);
+            //printf("j");
             finish_game_randomly(tmpBoard);
-            printf("ok7");
-
+            //printf("k");
             // 2. we check if we lose or win
             if(tmpBoard->player != proot->board->player) // victory
             {
-                printf("ok8");
                 propagate(tmp, 1); // 3. we propagate the result
             } else { // loss
-                printf("ok9");
                 propagate(tmp, 0); // 3. we propagate the result
             }
+            //printf("l");
             #if DEBUG == 1
             printf("\n === chosen node === \n");
             //debug_node(tmp);
             #endif // DEBUG
         }
     }
-    printf("ok10");
-    return maxNode(proot)->movementOrigin;
+    printf("m");
+
+    COORDS* bestMovement = maxNode(proot)->lastMovement;
+    deleteTree(proot);
+    return bestMovement;
 }
 
 
@@ -213,7 +275,7 @@ int get_son_number(P_NODE proot)
     {
         for(int i = 0; i < proot->father->board->movements_nbr; i++)
         {
-            if(proot->father->board->movements[i].x == proot->movementOrigin->x && proot->father->board->movements[i].y == proot->movementOrigin->y)
+            if(proot->father->board->movements[i].x == proot->lastMovement->x && proot->father->board->movements[i].y == proot->lastMovement->y)
                 return i;
         }
         return 10000; // impossible donc on sait que c'est une erreur
@@ -281,21 +343,21 @@ void debug_node(P_NODE proot)
         char row4[100];
         char row5[100];
         char row6[100];
+        char row7[100];
         int rowNumber = 5;
-        char *rowArray[5] = {row1, row2, row3, row4, row5, row6};
-
+        char *rowArray[5] = {row1, row2, row3, row4, row5, row6, row7};
         sprintf(row1, "\t#    passage: %d", proot->passage);
         sprintf(row2, "\t#    victory: %d", proot->victory);
         sprintf(row3, "\t#    averageVictory: %f", proot->averageVictory);
+        sprintf(row4, "\t#    ignore: %d", proot->ignore);
         if(proot->father == NULL){
-            sprintf(row4, "\t#    movementOrigin: [NULL]");
-            sprintf(row5, "\t#    son number: NULL");
+            sprintf(row5, "\t#    last move: [NULL]");
+            sprintf(row6, "\t#    son number: NULL");
         } else {
-            sprintf(row4, "\t#    movementOrigin: [%d, %d]", proot->movementOrigin->x, proot->movementOrigin->y);
-            sprintf(row5, "\t#    son number: %d", get_son_number(proot));
+            sprintf(row5, "\t#    last move: [%d, %d]", proot->lastMovement->x, proot->lastMovement->y);
+            sprintf(row6, "\t#    son number: %d", get_son_number(proot));
         }
-        sprintf(row6, "\t#    player: %d", proot->board->player+1);
-
+        sprintf(row7, "\t#    player: %d", proot->board->player+1);
         size_t max = max_row(rowArray, rowNumber);
         for(int i = 0; i < rowNumber; i++)
         {

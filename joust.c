@@ -164,9 +164,26 @@ int loser(BOARD *board) {
 	return (board->movements_nbr == 0);
 }
 
+/**
+ * the game is over if the remaning player is inferior or equal to one
+ * return true if over
+ * return false if not
+ */
 int end_game(BOARD *board) {
-	// fin du jeu seulement si le joueur courant est perdant
-	return loser(board);
+    BOARD *copyBoard = (BOARD *) malloc(sizeof(BOARD));
+    clone_game(copyBoard, board);
+    int remaning_player = 0;
+    for(int i = 0; i < 4; i++)
+    {
+        if(copyBoard->movements_nbr > 0){
+            remaning_player += 1;
+        }
+        copyBoard->player = (copyBoard->player + 1) % 4;
+        copyBoard->movements_nbr = generate_possible_movements(copyBoard, copyBoard->movements, copyBoard->player);
+    }
+    if(remaning_player <= 1)
+        return 1;
+    return 0;
 }
 
 void finish_game_randomly(BOARD *board) {
@@ -179,11 +196,19 @@ void finish_game_randomly(BOARD *board) {
 	}
 }
 
-int winner(BOARD *board) {
-	if (board->movements_nbr == 0)
-		return (board->player + 1) % 4;
-	else
-        return -1; // convention pas encore de gagnant
+int winner(BOARD *board) { // return the winner number of the player
+    BOARD *copyBoard = (BOARD *) malloc(sizeof(BOARD));
+    clone_game(copyBoard, board);
+    int winner_player = 0;
+    for(int i = 0; i < 4; i++)
+    {
+        if(copyBoard->movements_nbr > 0){
+            winner_player = copyBoard->player;
+            break;
+        }
+        copyBoard->player = (copyBoard->player + 1) % 4;
+        copyBoard->movements_nbr = generate_possible_movements(copyBoard, copyBoard->movements, copyBoard->player);
+    }
 }
 
 void play_move(BOARD *board, COORDS chosenMove) {
@@ -201,7 +226,7 @@ void play_move(BOARD *board, COORDS chosenMove) {
 	board->player = (board->player + 1) % 4;
 	// re-générer les mouvements possibles (ne pas oublier)
 	board->movements_nbr = generate_possible_movements(board, board->movements, board->player);
-    while(board->movements_nbr == 0)
+    while(board->movements_nbr == 0 && !end_game(board))
     {
         board->player = (board->player + 1) % 4;
         board->movements_nbr = generate_possible_movements(board, board->movements, board->player);
@@ -283,10 +308,10 @@ int main()
         aiPlay(&board);
         return 0;
     #endif // DEBUG
-	while(!loser(&board))
+	while(!end_game(&board))
     {
-            if(loser(&board))
-                break;
+            /*if(loser(&board))
+                break;*/
             play[playerRole[board.player]-1](&board); // le joueur courant joue son tour
             display_game(&board);
     }
