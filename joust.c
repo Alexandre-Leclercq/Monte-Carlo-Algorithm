@@ -8,10 +8,13 @@
 */
 
 #define DEBUG 0
+#define SEED 1337
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>  // contient aussi memcpy (voir plus bas)
+
+#include "mtwister.h"
 
 #include "joust.h"
 
@@ -137,6 +140,7 @@ int generate_possible_movements(BOARD *board, COORDS *mvts, int player) {
 }
 
 void init_game(BOARD *board) {
+    MTRand r = seedRand(SEED);
 	// initialise une partie
 	for (int i = 0; i < SIZE; i++) {
 		for (int j = 0; j < SIZE; j++) {
@@ -152,7 +156,7 @@ void init_game(BOARD *board) {
 	place(board, board->coords[1], SYMBOL[1]);  // le symbole joueur 2
 	place(board, board->coords[2], SYMBOL[2]);  // le symbole joueur 3
 	place(board, board->coords[3], SYMBOL[3]);  // le symbole joueur 4
-	board->player = rand()%4; // détermine 1er joueur aléatoirement
+	board->player = genRandLong(&r)%4; // détermine 1er joueur aléatoirement
 	// mémorise les coups possibles (tableau avec un marqueur de fin
 	// un peu comme une chaîne de caractères)
 	board->movements = (COORDS *) malloc(sizeof(COORDS) * 8); // alloue la place
@@ -187,24 +191,25 @@ int end_game(BOARD *board) {
 }
 
 void finish_game_randomly(BOARD *board) {
+    MTRand r = seedRand(SEED);
 	// termine aléatoirement la partie courante, qui est modifiée (donc la cloner avant si nécessaire)
 	while (!end_game(board)) {
 		// tirer au sort un numéro de mouvement (attention : tirage de faible qualité ici)
-		int choice = rand() % board->movements_nbr;
+		int choice = genRandLong(&r) % board->movements_nbr;
 		// jouer coup et changer de joueur
 		play_move(board, board->movements[choice]);
 	}
 }
 
-int winner(BOARD *board) { // return the winner number of the player
+// return the winner number of the player
+// only use when the game is over
+int winner(BOARD *board) {
     BOARD *copyBoard = (BOARD *) malloc(sizeof(BOARD));
     clone_game(copyBoard, board);
-    int winner_player = 0;
     for(int i = 0; i < 4; i++)
     {
         if(copyBoard->movements_nbr > 0){
-            winner_player = copyBoard->player;
-            break;
+            return copyBoard->player;
         }
         copyBoard->player = (copyBoard->player + 1) % 4;
         copyBoard->movements_nbr = generate_possible_movements(copyBoard, copyBoard->movements, copyBoard->player);
@@ -277,7 +282,8 @@ void humanPlay(BOARD* board)
 
 void randomPlay(BOARD* board)
 {
-    int choice = rand() % board->movements_nbr;
+    MTRand r = seedRand(SEED);
+    int choice = genRandLong(&r) % board->movements_nbr;
     play_move(board, board->movements[choice]);
 }
 
@@ -292,15 +298,15 @@ void aiPlay(BOARD* board)
 
 int main()
 {
+
 	int *playerRole = role();
 
 	BOARD board;
 	FN_PLAY play[] = {humanPlay, randomPlay, aiPlay};
 
 
-    long graine_alea = 0;
-	srand(graine_alea); // init générateur (pseudo-aléatoire)
-
+    long graine_alea = 1337;
+    MTRand r = seedRand(graine_alea); // init générateur (Mersenne-twister)
 	init_game(&board);
 	display_game(&board);
 

@@ -235,12 +235,14 @@ COORDS* bestChoice(BOARD* board)
             finish_game_randomly(tmpBoard);
             //printf("k");
             // 2. we check if we lose or win
-            if(tmpBoard->player != proot->board->player) // victory
-            {
+            if(winner(tmpBoard) == proot->board->player) // victory
                 propagate(tmp, 1); // 3. we propagate the result
-            } else { // loss
+            else // loss
                 propagate(tmp, 0); // 3. we propagate the result
-            }
+            /*
+            debug_node(tmp);
+            display_game(tmpBoard);
+            getchar(); // mode pas à pas */
             //printf("l");
             #if DEBUG == 1
             printf("\n === chosen node === \n");
@@ -248,7 +250,7 @@ COORDS* bestChoice(BOARD* board)
             #endif // DEBUG
         }
     }
-    printf("m");
+    //printf("m");
 
     COORDS* bestMovement = maxNode(proot)->lastMovement;
     deleteTree(proot);
@@ -369,7 +371,7 @@ void debug_node(P_NODE proot)
             strcat(rowArray[i], "    #\n");
         }
         display_message(rowArray, rowNumber);
-        display_game(proot->board);
+        //display_game(proot->board);
         printf("\n\n\n\n");
     }
 }
