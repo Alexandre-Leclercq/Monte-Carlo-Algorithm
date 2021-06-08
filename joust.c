@@ -8,7 +8,7 @@
 */
 
 #define DEBUG 0
-#define SEED 1337
+#define SEED 0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -129,7 +129,7 @@ int generate_possible_movements(BOARD *board, COORDS *mvts, int player) {
 		COORDS tmp = board->coords[player];  // position initiale
 		tmp.x += X[dir]; // ajout décalage X puis Y
 		tmp.y += Y[dir];
-		// teste et mémorise si autorisé
+		// test et mémorise si autorisé
 		if (tmp.x >= 0 && tmp.x < SIZE && tmp.y >= 0 && tmp.y < SIZE &&
 			board->checkerboard[tmp.x][tmp.y] == FREE) {
 			mvts[next] = tmp; // ok, mémoriser
@@ -292,8 +292,6 @@ void aiPlay(BOARD* board)
 {
     COORDS* movement = bestChoice(board);
     play_move(board, *movement);
-    printf("\n[%d, %d]\n", movement->x, movement->y);
-    //play_move(board, *movement);
 }
 
 int main()
@@ -303,10 +301,6 @@ int main()
 
 	BOARD board;
 	FN_PLAY play[] = {humanPlay, randomPlay, aiPlay};
-
-
-    long graine_alea = 1337;
-    MTRand r = seedRand(graine_alea); // init générateur (Mersenne-twister)
 	init_game(&board);
 	display_game(&board);
 

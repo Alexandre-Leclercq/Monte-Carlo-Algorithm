@@ -12,20 +12,9 @@
 #define SIMULATION 100
 
 
-
-int totalPassage(P_NODE proot)
-{
-    while(proot->father != NULL)
-    {
-        proot = proot->father;
-    }
-    return proot->passage;
-}
-
-
 float calculUCT(P_NODE proot)
 {
-    return proot->averageVictory + 2*Cp*sqrt((2*log(totalPassage(proot)))/proot->passage);
+    return proot->averageVictory + 2*Cp*sqrt((2*log(proot->father->passage))/proot->passage);
 }
 
 /**
@@ -48,22 +37,13 @@ P_NODE selectBestSon(P_NODE proot)
     float tmp[proot->board->movements_nbr]; // array that will contain UCT value to each sons
     for(int i = 0; i < proot->board->movements_nbr; i++)
     {
-        #if DEBUG == 1
-        printf("\nj: %d\n", i);
-        #endif // DEBUG
-        if(proot->son[i]->passage == 0 || totalPassage(proot) == 0){ // infinite value
-            #if DEBUG == 1
-            printf("\n infinite value\n");
-            #endif // DEBUG
+        if(proot->son[i]->passage == 0 || proot->passage == 0){ // infinite value
             return proot->son[i];
         }
         if(proot->son[i]->ignore == 1)
             tmp[i] = 0;
         else
             tmp[i] = calculUCT(proot->son[i]);
-        #if DEBUG == 1
-        printf("\nfils[%d] uct: %f\n", i, tmp[i]);
-        #endif // DEBUG
     }
     return proot->son[indexMaxValue(tmp, proot->board->movements_nbr)];
 }
@@ -80,7 +60,6 @@ void createSon(P_NODE proot)
         tmp->victory = 0;
         tmp->averageVictory = 0;
         tmp->son = NULL;
-        //proot->remainingSon = NULL;
         tmp->father = proot;
         play_move(copyBoard, proot->board->movements[i]);
         tmp->board = copyBoard;
@@ -180,7 +159,6 @@ COORDS* bestChoice(BOARD* board)
     clone_game(copyBoard, board);
     proot->father = NULL;
     proot->son = NULL;
-    //proot->remainingSon = NULL;
     proot->victory = 0;
     proot->averageVictory = 0;
     proot->ignore = 0;
