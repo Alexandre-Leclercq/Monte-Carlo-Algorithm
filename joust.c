@@ -119,6 +119,11 @@ void clone_game(BOARD *pl2, BOARD *pl1) {
 	memcpy(pl2->movements, pl1->movements, sizeof(COORDS)*8);
 }
 
+void freeCopyBoard(BOARD *board){
+    free(board->movements);
+    free(board);
+}
+
 int generate_possible_movements(BOARD *board, COORDS *mvts, int player) {
 	// place dans le vecteur mvts les coords des mouvements possibles pour le
 	// n° du joueur indiqué, retourne le nombre de coords effectivement écrites dans mvts
@@ -179,6 +184,7 @@ int end_game(BOARD *board) {
     BOARD *copyBoard = (BOARD *) malloc(sizeof(BOARD));
     clone_game(copyBoard, board);
     int remaning_player = 0;
+    int victory = 0;
     for(int i = 0; i < 4; i++)
     {
         if(copyBoard->movements_nbr > 0){
@@ -188,8 +194,9 @@ int end_game(BOARD *board) {
         copyBoard->movements_nbr = generate_possible_movements(copyBoard, copyBoard->movements, copyBoard->player);
     }
     if(remaning_player <= 1)
-        return 1;
-    return 0;
+        victory = 1;
+    freeCopyBoard(copyBoard);
+    return victory;
 }
 
 void finish_game_randomly(BOARD *board) {
@@ -211,11 +218,13 @@ int winner(BOARD *board) {
     for(int i = 0; i < 4; i++)
     {
         if(copyBoard->movements_nbr > 0){
+            free(copyBoard);
             return copyBoard->player;
         }
         copyBoard->player = (copyBoard->player + 1) % 4;
         copyBoard->movements_nbr = generate_possible_movements(copyBoard, copyBoard->movements, copyBoard->player);
     }
+    freeCopyBoard(copyBoard);
 }
 
 void play_move(BOARD *board, COORDS chosenMove) {
@@ -294,6 +303,7 @@ void aiPlay(BOARD* board)
 {
     COORDS* movement = bestChoice(board);
     play_move(board, *movement);
+    free(movement);
 }
 
 void testCp()
@@ -341,5 +351,6 @@ int main()
             display_game(&board);
     }
     printf("winner is player %c\n", SYMBOL[winner(&board)]);
+    free(playerRole);
 }
 

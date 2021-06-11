@@ -127,6 +127,7 @@ int endOfBranch(int iaPlayerNumber, P_NODE pracine)
         copyBoard->player = (copyBoard->player + 1) % 4;
         copyBoard->movements_nbr = generate_possible_movements(copyBoard, copyBoard->movements, copyBoard->player);
     }
+    freeCopyBoard(copyBoard);
     if(iaWin) // if the ia win
         return 1;
     return 0; // if the ia is still playing
@@ -145,12 +146,13 @@ void deleteTree(P_NODE proot)
             break;
         deleteTree(proot->son[i]);
     }
-    free(proot->board);
+    freeCopyBoard(proot->board);
     proot->board = NULL;
     free(proot->son);
     proot->son = NULL;
     free(proot);
     proot = NULL;
+
     return;
 
 }
@@ -206,23 +208,19 @@ COORDS* bestChoice(BOARD* board)
                 propagate(tmp, 1); // 3. we propagate the result
             else // loss
                 propagate(tmp, 0); // 3. we propagate the result
+            freeCopyBoard(tmpBoard);
             #if DEBUG == 1
             printf("\n === chosen node === \n");
             //debug_node(tmp);
             #endif // DEBUG
         }
     }
-    COORDS* bestMovement = maxNode(proot)->lastMovement;
+    COORDS* bestMovement = (COORDS *) malloc(sizeof(COORDS));
+    bestMovement->x = maxNode(proot)->lastMovement->x;
+    bestMovement->y = maxNode(proot)->lastMovement->y;
     deleteTree(proot);
     return bestMovement;
 }
-
-
-// TODO destroy useless part of the tree
-
-
-
-
 
 
 /// debug fonction utiliser pour le débuguage

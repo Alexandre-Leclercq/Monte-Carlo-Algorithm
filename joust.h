@@ -33,7 +33,7 @@ typedef struct {
 // la place sur la pile mémoire)
 typedef struct {
 	CHECKERBOARD checkerboard;
-	COORDS coords[4]; // coords des 2 joueurs
+	COORDS coords[4]; // coords des 4 joueurs
 	int player; // numéro de joueur courant
 	COORDS *movements; // tableau *à allouer* de mvts possible pour joueur courant
 						// ce tableau sera maintenu à jour à chaque coup
