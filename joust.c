@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>  // contient aussi memcpy (voir plus bas)
+#include <time.h>
+
 
 #include "mtwister.h"
 
@@ -294,9 +296,32 @@ void aiPlay(BOARD* board)
     play_move(board, *movement);
 }
 
+void testCp()
+{
+    int playerRole[4] = {3, 2, 2, 2};
+    FN_PLAY play[] = {humanPlay, randomPlay, aiPlay};
+    int p1_winner = 0;
+    BOARD board;
+    for(int i = 0; i < 100; i++) // number of game simulate
+    {
+
+        init_game(&board);
+        while(!end_game(&board))
+        {
+            play[playerRole[board.player]-1](&board); // le joueur courant joue son tour
+            //display_game(&board);
+            getchar();
+        }
+        int pWinner = winner(&board);
+        printf("winner is player %c\n", SYMBOL[pWinner]);
+        if(pWinner == 0)
+            p1_winner++;
+    }
+    printf("\n the ia won %d times", p1_winner);
+}
+
 int main()
 {
-
 	int *playerRole = role();
 
 	BOARD board;

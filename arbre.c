@@ -8,8 +8,8 @@
 
 #define DEBUG 0
 
-#define Cp 0.3
-#define SIMULATION 100
+#define Cp 0.7
+#define SIMULATION 200
 
 
 float calculUCT(P_NODE proot)
@@ -146,8 +146,11 @@ void deleteTree(P_NODE proot)
         deleteTree(proot->son[i]);
     }
     free(proot->board);
+    proot->board = NULL;
     free(proot->son);
+    proot->son = NULL;
     free(proot);
+    proot = NULL;
     return;
 
 }
@@ -174,62 +177,41 @@ COORDS* bestChoice(BOARD* board)
         P_NODE tmp = proot;
         if(proot->ignore == 1)
             break;
-        //printf("a");
         while(tmp->passage > 0 || tmp->father == NULL)
         {
             // looking for best sons
-            //printf("b");
             if(tmp->son == NULL)
                 createSon(tmp);
-            //printf("c");
             tmp = selectBestSon(tmp); // TODO rajouter la création des enfants s'il n'existe pass
-            //printf("d");
             #if DEBUG == 1
             printf("\n === Selected Son ===\n");
             debug_node(tmp);
             #endif // DEBUG
         }
-        //printf("z");
-        //printf("player ia: %d\n", proot->board->player);
-        //printf("current player: %d\n", tmp->board->player);
         if(endOfBranch(proot->board->player, tmp)){ // if the game is over for the ia
             tmp->ignore = 1;
-            //printf("e");
             if(winner(tmp->board) == proot->board->player) // if the ia won
                 propagate(tmp, 1);
             else
                 propagate(tmp, 0);
-            //printf("f");
             ignoreFather(tmp->father);
-            //printf("g");
         } else {
             // simulate the current node
             // 1. we end the game randomly
-            //printf("h");
             BOARD *tmpBoard = (BOARD *) malloc(sizeof(BOARD));
-            //printf("i");
             clone_game(tmpBoard, tmp->board);
-            //printf("j");
             finish_game_randomly(tmpBoard);
-            //printf("k");
             // 2. we check if we lose or win
             if(winner(tmpBoard) == proot->board->player) // victory
                 propagate(tmp, 1); // 3. we propagate the result
             else // loss
                 propagate(tmp, 0); // 3. we propagate the result
-            /*
-            debug_node(tmp);
-            display_game(tmpBoard);
-            getchar(); // mode pas à pas */
-            //printf("l");
             #if DEBUG == 1
             printf("\n === chosen node === \n");
             //debug_node(tmp);
             #endif // DEBUG
         }
     }
-    //printf("m");
-
     COORDS* bestMovement = maxNode(proot)->lastMovement;
     deleteTree(proot);
     return bestMovement;
